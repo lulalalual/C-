@@ -54,12 +54,12 @@ export const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, onSubmi
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
       {/* Header / Progress */}
-      <div className="sticky top-0 z-20 bg-slate-900/80 backdrop-blur border-b border-slate-800 px-6 py-4">
+      <div className="sticky top-0 z-20 bg-slate-900/90 backdrop-blur-sm border-b border-slate-800 px-4 md:px-6 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between mb-2">
-          <span className="text-slate-400 font-mono text-sm">题目 {currentIdx + 1} / {questions.length}</span>
-          <span className="text-slate-400 font-mono text-sm">完成度 {Math.round(progress)}%</span>
+          <span className="text-slate-400 font-mono text-xs md:text-sm">题目 {currentIdx + 1} / {questions.length}</span>
+          <span className="text-slate-400 font-mono text-xs md:text-sm">完成度 {Math.round(progress)}%</span>
         </div>
-        <div className="max-w-4xl mx-auto h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className="max-w-4xl mx-auto h-1 bg-slate-800 rounded-full overflow-hidden">
           <div 
             className="h-full bg-indigo-500 transition-all duration-300 ease-out"
             style={{ width: `${progress}%` }}
@@ -67,57 +67,59 @@ export const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, onSubmi
         </div>
       </div>
 
-      <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 flex flex-col">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 md:px-6 py-6 flex flex-col">
         {/* Question Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl mb-6">
-          <div className="flex items-center gap-3 mb-6">
-            <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-8 shadow-xl mb-6 flex flex-col flex-1 md:flex-none">
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
+            <span className={`px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider
               ${currentQ.difficulty === '困难' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
                 currentQ.difficulty === '中等' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
                 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
               }`}>
               {currentQ.difficulty}
             </span>
-            <span className="text-slate-500 text-sm font-medium px-2 py-1 bg-slate-800 rounded">
+            <span className="text-slate-500 text-[10px] md:text-sm font-medium px-2 py-0.5 md:py-1 bg-slate-800 rounded">
               {currentQ.category}
             </span>
           </div>
 
-          <h2 className="text-xl md:text-2xl font-semibold text-slate-100 leading-relaxed mb-4">
+          <h2 className="text-lg md:text-2xl font-semibold text-slate-100 leading-relaxed mb-4 md:mb-6">
             {currentQ.text}
           </h2>
 
-          <div className="relative">
+          <div className="relative flex-1 flex flex-col">
             <textarea
-              className="w-full h-64 bg-slate-950 border border-slate-700 rounded-xl p-4 text-slate-300 font-mono text-base focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none transition-shadow"
+              className="w-full flex-1 md:h-64 min-h-[200px] bg-slate-950 border border-slate-700 rounded-xl p-4 text-slate-300 font-mono text-sm md:text-base focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none transition-shadow"
               placeholder="// 在此输入你的答案..."
               value={answers[currentQ.id] || ''}
               onChange={(e) => handleAnswerChange(e.target.value)}
               autoFocus
             />
-            <div className="absolute bottom-4 right-4 text-xs text-slate-600 font-mono">
+            <div className="absolute bottom-4 right-4 text-[10px] md:text-xs text-slate-600 font-mono hidden md:block">
               支持 Markdown
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center mt-auto">
+        <div className="flex justify-between items-center mt-auto pt-2">
           <Button 
             variant="secondary" 
             onClick={handlePrev} 
             disabled={currentIdx === 0}
+            size="md"
+            className="text-sm px-4"
           >
             上一题
           </Button>
           
           <div className="flex gap-4">
             {currentIdx < questions.length - 1 ? (
-              <Button onClick={handleNext}>
+              <Button onClick={handleNext} size="md" className="text-sm px-4">
                 下一题
               </Button>
             ) : (
-              <Button variant="primary" onClick={handleSubmit} isLoading={isLoading}>
+              <Button variant="primary" onClick={handleSubmit} isLoading={isLoading} size="md" className="text-sm px-4">
                 提交面试
               </Button>
             )}
