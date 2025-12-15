@@ -30,10 +30,9 @@
       }
     </style>
     <script>
-      // Safety polyfill for environments that don't inject process properly
-      if (typeof process === 'undefined') {
-        window.process = { env: {} };
-      }
+      // Robust polyfill for process.env
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
     </script>
   <script type="importmap">
 {

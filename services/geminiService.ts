@@ -1,9 +1,14 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Question, QuizResult, QuestionAnalysis, LearningStep } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const MODEL_NAME = "gemini-2.5-flash";
+
+// Helper to lazily get the AI instance. 
+// This prevents the app from crashing at startup if the API key environment variable 
+// isn't immediately available or if the SDK throws an error during initialization.
+const getAI = () => {
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+};
 
 // Schema definitions for structured output
 
@@ -80,6 +85,7 @@ export const generateInterviewQuestions = async (topics: string[]): Promise<Ques
   `;
 
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: prompt,
@@ -132,6 +138,7 @@ export const analyzeInterviewPerformance = async (
   `;
 
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: prompt,
