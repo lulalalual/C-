@@ -1,9 +1,17 @@
+
 export enum AppState {
   WELCOME = 'WELCOME',
   SELECTION = 'SELECTION',
   QUIZ = 'QUIZ',
   ANALYZING = 'ANALYZING',
   RESULTS = 'RESULTS',
+}
+
+export type AIProvider = 'gemini' | 'deepseek';
+
+export interface AIConfig {
+  provider: AIProvider;
+  apiKey: string;
 }
 
 export interface Topic {

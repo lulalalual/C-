@@ -1,18 +1,14 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { Question, QuizResult, QuestionAnalysis, LearningStep } from "../types";
+import { Question, QuizResult, AIConfig } from "../types";
 
-const MODEL_NAME = "gemini-2.5-flash";
+// --- Configuration & Schemas ---
 
-// Helper to lazily get the AI instance. 
-// This prevents the app from crashing at startup if the API key environment variable 
-// isn't immediately available or if the SDK throws an error during initialization.
-const getAI = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
-};
+const GEMINI_MODEL = "gemini-2.5-flash";
+const DEEPSEEK_MODEL = "deepseek-chat";
+const DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
 
-// Schema definitions for structured output
-
-const questionSchema: Schema = {
+// Schema definitions for Gemini (Structured Output)
+const geminiQuestionSchema: Schema = {
   type: Type.ARRAY,
   items: {
     type: Type.OBJECT,
@@ -26,7 +22,7 @@ const questionSchema: Schema = {
   }
 };
 
-const analysisSchema: Schema = {
+const geminiAnalysisSchema: Schema = {
   type: Type.OBJECT,
   properties: {
     overallScore: { type: Type.INTEGER, description: "Overall score out of 100" },
@@ -65,9 +61,19 @@ const analysisSchema: Schema = {
   required: ['overallScore', 'overallFeedback', 'questionAnalysis', 'learningPath']
 };
 
-export const generateInterviewQuestions = async (topics: string[]): Promise<Question[]> => {
+// --- Helper Functions ---
+
+const cleanJsonString = (str: string): string => {
+  // Remove markdown code blocks if present (common with DeepSeek/OpenAI)
+  return str.replace(/```json\n?|\n?```/g, '').trim();
+};
+
+// --- API Calls ---
+
+export const generateInterviewQuestions = async (topics: string[], config: AIConfig): Promise<Question[]> => {
   const topicList = topics.join(', ');
-  const prompt = `
+  const systemPrompt = "你是一位来自中国一线互联网大厂（如腾讯、字节跳动）的资深 C++ 技术面试官。请用中文出题。";
+  const userPrompt = `
     Generate 10 technical interview short-answer questions for a C++ Backend Intern position.
     Focus on these topics: ${topicList}.
     The questions MUST be based on real interview questions from top Chinese tech giants like Tencent (腾讯), ByteDance (字节跳动), Alibaba (阿里), and Meituan (美团).
@@ -77,38 +83,77 @@ export const generateInterviewQuestions = async (topics: string[]): Promise<Ques
     Mix difficulties: 3 简单 (Easy), 4 中等 (Medium), 3 困难 (Hard).
     
     Examples of style:
-    - "请简述虚函数的实现机制。" (Explain the implementation mechanism of virtual functions.)
-    - "select、poll 和 epoll 有什么区别？为什么 epoll 效率更高？" (What is the difference between select, poll, and epoll? Why is epoll more efficient?)
-    - "std::shared_ptr 是如何实现引用计数的？它是线程安全的吗？" (How does std::shared_ptr implement reference counting and is it thread-safe?)
+    - "请简述虚函数的实现机制。"
+    - "select、poll 和 epoll 有什么区别？为什么 epoll 效率更高？"
+    - "std::shared_ptr 是如何实现引用计数的？它是线程安全的吗？"
     
-    Return pure JSON matching the schema.
+    Return a STRICT JSON ARRAY. No markdown formatting.
+    Format:
+    [
+      { "id": 1, "category": "C++", "text": "Question?", "difficulty": "简单" }
+    ]
   `;
 
-  try {
-    const ai = getAI();
+  if (config.provider === 'gemini') {
+    const ai = new GoogleGenAI({ apiKey: config.apiKey });
     const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
+      model: GEMINI_MODEL,
+      contents: userPrompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: questionSchema,
-        systemInstruction: "你是一位来自中国一线互联网大厂（如腾讯、字节跳动）的资深 C++ 技术面试官。请用中文出题。",
+        responseSchema: geminiQuestionSchema,
+        systemInstruction: systemPrompt,
       },
     });
+    if (!response.text) throw new Error("No response from Gemini");
+    return JSON.parse(response.text) as Question[];
+  } 
+  
+  else if (config.provider === 'deepseek') {
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt + " You must respond with a JSON object." },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
 
-    const text = response.text;
-    if (!text) throw new Error("No response from AI");
-    return JSON.parse(text) as Question[];
-  } catch (error) {
-    console.error("Failed to generate questions:", error);
-    // Fallback or rethrow
-    throw error;
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`DeepSeek API Error: ${err}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("No content from DeepSeek");
+    
+    // DeepSeek might return { "questions": [...] } or just [...] depending on how it interpreted "JSON Object" vs "Array"
+    // We try to parse and handle both.
+    const parsed = JSON.parse(cleanJsonString(content));
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
+    // Fallback: try to find an array in values
+    const possibleArray = Object.values(parsed).find(v => Array.isArray(v));
+    if (possibleArray) return possibleArray as Question[];
+    
+    throw new Error("DeepSeek response format unexpected");
   }
+
+  throw new Error("Invalid Provider");
 };
 
 export const analyzeInterviewPerformance = async (
   questions: Question[],
-  answers: Record<number, string>
+  answers: Record<number, string>,
+  config: AIConfig
 ): Promise<QuizResult> => {
   
   const qaPairs = questions.map(q => ({
@@ -119,7 +164,8 @@ export const analyzeInterviewPerformance = async (
     candidateAnswer: answers[q.id] || "(未回答)"
   }));
 
-  const prompt = `
+  const systemPrompt = "你是一位严厉但乐于助人的资深 C++ 架构师。你非常看重候选人对内存管理、并发编程和操作系统内核的深度理解。请用中文进行点评和分析。";
+  const userPrompt = `
     Analyze the following C++ Backend Intern interview session.
     
     Data:
@@ -134,37 +180,75 @@ export const analyzeInterviewPerformance = async (
 
     IMPORTANT: OUTPUT MUST BE IN CHINESE (SIMPLIFIED).
     
-    Return pure JSON matching the schema.
+    Return pure JSON.
+    Format Structure:
+    {
+      "overallScore": number,
+      "overallFeedback": "string",
+      "questionAnalysis": [
+         { "questionId": number, "questionText": "string", "score": number, "feedback": "string", "standardAnswer": "string" }
+      ],
+      "learningPath": [
+         { "title": "string", "description": "string", "resources": ["string"] }
+      ]
+    }
   `;
 
-  try {
-    const ai = getAI();
+  if (config.provider === 'gemini') {
+    const ai = new GoogleGenAI({ apiKey: config.apiKey });
     const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
+      model: GEMINI_MODEL,
+      contents: userPrompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: analysisSchema,
-        systemInstruction: "你是一位严厉但乐于助人的资深 C++ 架构师。你非常看重候选人对内存管理、并发编程和操作系统内核的深度理解。请用中文进行点评和分析。",
+        responseSchema: geminiAnalysisSchema,
+        systemInstruction: systemPrompt,
       },
     });
 
-    const text = response.text;
-    if (!text) throw new Error("No analysis from AI");
-    
-    // Inject user answers back into the result for display purposes if needed, 
-    // although the schema already asks for questionText, we augment it to be safe.
-    const result = JSON.parse(text) as QuizResult;
-    
-    // Ensure user answers are attached (sometimes AI might summarize differently)
+    if (!response.text) throw new Error("No analysis from Gemini");
+    const result = JSON.parse(response.text) as QuizResult;
+    // Inject user answers
     result.questionAnalysis = result.questionAnalysis.map(qa => ({
       ...qa,
       userAnswer: answers[qa.questionId] || "(未回答)"
     }));
-
     return result;
-  } catch (error) {
-    console.error("Failed to analyze answers:", error);
-    throw error;
   }
+
+  else if (config.provider === 'deepseek') {
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt + " You must respond with a JSON object." },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`DeepSeek API Error: ${err}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("No content from DeepSeek");
+    
+    const result = JSON.parse(cleanJsonString(content)) as QuizResult;
+    result.questionAnalysis = result.questionAnalysis.map(qa => ({
+      ...qa,
+      userAnswer: answers[qa.questionId] || "(未回答)"
+    }));
+    return result;
+  }
+
+  throw new Error("Invalid Provider");
 };
