@@ -46,12 +46,12 @@ const App: React.FC = () => {
   };
 
   // Transition: Selection -> Quiz (fetch questions)
-  const handleTopicsSelected = async (selectedTopicIds: string[]) => {
+  const handleTopicsSelected = async (selectedTopicIds: string[], resumeText?: string) => {
     if (!aiConfig) return;
     
     setIsLoading(true);
     try {
-      const generatedQuestions = await generateInterviewQuestions(selectedTopicIds, aiConfig);
+      const generatedQuestions = await generateInterviewQuestions(selectedTopicIds, aiConfig, resumeText);
       setQuestions(generatedQuestions);
       setAppState(AppState.QUIZ);
     } catch (error: any) {

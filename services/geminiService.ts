@@ -70,29 +70,42 @@ const cleanJsonString = (str: string): string => {
 
 // --- API Calls ---
 
-export const generateInterviewQuestions = async (topics: string[], config: AIConfig): Promise<Question[]> => {
+export const generateInterviewQuestions = async (topics: string[], config: AIConfig, resumeText?: string): Promise<Question[]> => {
   const topicList = topics.join(', ');
   const systemPrompt = "你是一位来自中国一线互联网大厂（如腾讯、字节跳动）的资深 C++ 技术面试官。请用中文出题。";
-  const userPrompt = `
+  
+  let userPrompt = `
     Generate 10 technical interview short-answer questions for a C++ Backend Intern position.
-    Focus on these topics: ${topicList}.
     The questions MUST be based on real interview questions from top Chinese tech giants like Tencent (腾讯), ByteDance (字节跳动), Alibaba (阿里), and Meituan (美团).
-    
     IMPORTANT: OUTPUT MUST BE IN CHINESE (SIMPLIFIED).
-    
     Mix difficulties: 3 简单 (Easy), 4 中等 (Medium), 3 困难 (Hard).
+    Return a STRICT JSON ARRAY. No markdown formatting.
+    Format: [{ "id": 1, "category": "Category", "text": "Question?", "difficulty": "简单" }]
+  `;
+
+  if (resumeText && resumeText.trim().length > 0) {
+    userPrompt += `
+    
+    CANDIDATE RESUME:
+    """
+    ${resumeText}
+    """
+    
+    INSTRUCTIONS:
+    The candidate has provided their resume. 
+    1. At least 5 questions MUST be specifically tailored to the projects, skills, or experience mentioned in the resume (e.g., "In your project X, how did you handle...", "You mentioned usage of Redis, can you explain...").
+    2. The remaining questions should cover general C++ backend concepts ${topicList ? `and the selected topics: ${topicList}` : 'such as OS, Network, and C++ internals'}.
+    3. If the resume lacks detail, ask digging questions about the listed technologies.
+    `;
+  } else {
+    userPrompt += `
+    Focus on these topics: ${topicList}.
     
     Examples of style:
     - "请简述虚函数的实现机制。"
     - "select、poll 和 epoll 有什么区别？为什么 epoll 效率更高？"
-    - "std::shared_ptr 是如何实现引用计数的？它是线程安全的吗？"
-    
-    Return a STRICT JSON ARRAY. No markdown formatting.
-    Format:
-    [
-      { "id": 1, "category": "C++", "text": "Question?", "difficulty": "简单" }
-    ]
-  `;
+    `;
+  }
 
   if (config.provider === 'gemini') {
     const ai = new GoogleGenAI({ apiKey: config.apiKey });
