@@ -16,61 +16,104 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, onRestart }) =
 
   return (
     <div className="min-h-screen bg-slate-950 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-12">
+      <div className="max-w-6xl mx-auto space-y-12">
         
-        {/* Header Summary */}
-        <div className="bg-slate-900 rounded-2xl p-8 border border-slate-800 text-center relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-3xl font-bold text-white mb-2">面试分析报告</h2>
-            <div className={`text-6xl font-black mb-4 ${getScoreColor(result.overallScore)}`}>
-              {result.overallScore}
-              <span className="text-2xl text-slate-500 font-medium">/100</span>
+        {/* Header Summary with Dimensions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-slate-900 rounded-2xl p-8 border border-slate-800 relative overflow-hidden">
+             <div className="relative z-10">
+              <h2 className="text-2xl font-bold text-white mb-2">面试评估报告</h2>
+              <div className="flex items-baseline gap-4 mb-4">
+                <span className={`text-6xl font-black ${getScoreColor(result.overallScore)}`}>{result.overallScore}</span>
+                <span className="text-slate-500">综合得分</span>
+              </div>
+              <p className="text-slate-300 leading-relaxed bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
+                {result.overallFeedback}
+              </p>
             </div>
-            <p className="text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              {result.overallFeedback}
-            </p>
           </div>
-          {/* Background decoration */}
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none" />
+          
+          {/* Dimension Radar */}
+          <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 flex flex-col justify-center space-y-4">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">五维能力模型</h3>
+            {Object.entries(result.dimensions).map(([key, value]) => (
+              <div key={key}>
+                <div className="flex justify-between text-xs mb-1 uppercase text-slate-400 font-semibold">
+                  <span>{key}</span>
+                  <span>{value}</span>
+                </div>
+                <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                  <div 
+                    className={`h-full rounded-full ${value >= 80 ? 'bg-emerald-500' : value >= 60 ? 'bg-indigo-500' : 'bg-red-500'}`} 
+                    style={{ width: `${value}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Detailed Breakdown */}
         <div className="space-y-6">
           <h3 className="text-2xl font-bold text-white flex items-center gap-2">
             <span className="w-1 h-8 bg-indigo-500 rounded-full"></span>
-            详细点评
+            深度解析
           </h3>
           
-          <div className="grid gap-6">
+          <div className="grid gap-8">
             {result.questionAnalysis.map((item, idx) => (
-              <div key={idx} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-700 transition-colors">
-                <div className="p-6 border-b border-slate-800/50 flex justify-between items-start gap-4">
-                  <div>
-                    <span className="text-xs font-mono text-slate-500 mb-1 block">题目 {idx + 1}</span>
-                    <h4 className="text-lg font-medium text-slate-200">{item.questionText}</h4>
-                  </div>
-                  <div className={`flex flex-col items-center px-3 py-1 rounded bg-slate-800 border border-slate-700 min-w-[60px]`}>
-                    <span className={`text-xl font-bold ${getScoreColor(item.score * 10)}`}>{item.score}</span>
-                    <span className="text-[10px] text-slate-500 uppercase">/ 10</span>
-                  </div>
+              <div key={idx} className="bg-[#1e1e1e] border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+                <div className="p-4 bg-[#252526] border-b border-[#3e3e3e] flex justify-between items-start">
+                   <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-mono text-slate-500">Q{idx + 1}</span>
+                        <span className="px-2 py-0.5 text-[10px] uppercase bg-slate-800 text-slate-400 rounded border border-slate-700">{item.questionType}</span>
+                      </div>
+                      <h4 className="text-lg font-medium text-slate-200">{item.questionText}</h4>
+                   </div>
+                   <div className={`text-2xl font-bold px-4 ${getScoreColor(item.score * 10)}`}>
+                     {item.score}<span className="text-sm text-slate-600">/10</span>
+                   </div>
                 </div>
-                
-                <div className="p-6 space-y-4 bg-slate-900/50">
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">你的回答</h5>
-                    <p className="text-slate-300 font-mono text-sm bg-slate-950 p-3 rounded border border-slate-800 whitespace-pre-wrap">
+
+                <div className="grid grid-cols-1 lg:grid-cols-2">
+                  {/* Left: User Answer / Code */}
+                  <div className="p-6 border-b lg:border-b-0 lg:border-r border-[#3e3e3e] bg-[#1e1e1e]">
+                    <h5 className="text-xs font-bold text-slate-500 uppercase mb-3">你的回答/代码</h5>
+                    <pre className="text-sm font-mono text-slate-300 whitespace-pre-wrap bg-[#111] p-4 rounded border border-[#333] overflow-x-auto">
                       {item.userAnswer}
-                    </p>
+                    </pre>
+                    
+                    {item.codeFeedback && (
+                      <div className="mt-4 space-y-2">
+                        <div className={`text-xs px-2 py-1 rounded inline-block ${item.codeFeedback.isCompilable ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>
+                          {item.codeFeedback.isCompilable ? '编译通过' : '编译失败'}
+                        </div>
+                        {item.codeFeedback.efficiency && (
+                          <p className="text-xs text-slate-500"><span className="text-slate-400">效率分析:</span> {item.codeFeedback.efficiency}</p>
+                        )}
+                        {item.codeFeedback.modernCppUsage && (
+                          <p className="text-xs text-slate-500"><span className="text-slate-400">现代 C++ 建议:</span> {item.codeFeedback.modernCppUsage}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-6 mt-4">
-                    <div>
-                      <h5 className="text-xs font-bold text-amber-500/80 uppercase tracking-wider mb-2">点评</h5>
-                      <p className="text-slate-400 text-sm leading-relaxed">{item.feedback}</p>
+                  {/* Right: Feedback */}
+                  <div className="p-6 bg-[#202022]">
+                    <div className="mb-6">
+                      <h5 className="text-xs font-bold text-amber-500 uppercase mb-2">面试官点评</h5>
+                      <p className="text-sm text-slate-300 leading-relaxed">{item.feedback}</p>
                     </div>
                     <div>
-                      <h5 className="text-xs font-bold text-emerald-500/80 uppercase tracking-wider mb-2">参考答案</h5>
-                      <p className="text-slate-400 text-sm leading-relaxed">{item.standardAnswer}</p>
+                      <h5 className="text-xs font-bold text-emerald-500 uppercase mb-2">参考答案 / 优化思路</h5>
+                      <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">{item.standardAnswer}</p>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <button className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                        加入错题本
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -85,23 +128,18 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, onRestart }) =
             <span className="w-1 h-8 bg-cyan-500 rounded-full"></span>
             推荐学习路径
           </h3>
-          
-          <div className="relative border-l-2 border-slate-800 ml-4 md:ml-6 space-y-8 pb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {result.learningPath.map((step, idx) => (
-              <div key={idx} className="relative pl-8 md:pl-12">
-                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-900 border-2 border-indigo-500"></div>
-                
-                <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
-                  <h4 className="text-xl font-semibold text-white mb-2">{step.title}</h4>
-                  <p className="text-slate-400 mb-4">{step.description}</p>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {step.resources.map((res, rIdx) => (
-                      <span key={rIdx} className="px-2 py-1 text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded">
-                        {res}
-                      </span>
-                    ))}
-                  </div>
+              <div key={idx} className="bg-slate-900 p-6 rounded-xl border border-slate-800 hover:border-indigo-500/50 transition-all">
+                <div className="text-indigo-500 font-black text-4xl opacity-20 mb-2">0{idx + 1}</div>
+                <h4 className="text-lg font-bold text-white mb-2">{step.title}</h4>
+                <p className="text-sm text-slate-400 mb-4 h-10 line-clamp-2">{step.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  {step.resources.map((res, rIdx) => (
+                    <span key={rIdx} className="px-2 py-1 text-[10px] font-medium bg-slate-800 text-slate-300 rounded border border-slate-700">
+                      {res}
+                    </span>
+                  ))}
                 </div>
               </div>
             ))}
@@ -110,10 +148,9 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, onRestart }) =
 
         <div className="flex justify-center pt-8 pb-16">
           <Button size="lg" onClick={onRestart}>
-            开始新的面试
+            开始新的挑战
           </Button>
         </div>
-
       </div>
     </div>
   );
