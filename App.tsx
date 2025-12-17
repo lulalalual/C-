@@ -1,44 +1,62 @@
 import React, { useState, useEffect } from 'react';
+import { LoginScreen } from './components/LoginScreen';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { TopicSelection } from './components/TopicSelection';
 import { QuizInterface } from './components/QuizInterface';
 import { ResultsView } from './components/ResultsView';
 import { SettingsModal } from './components/SettingsModal';
 import { Dashboard } from './components/Dashboard';
-import { AppState, Question, QuizResult, AIConfig, InterviewerStyle } from './types';
+import { AppState, Question, QuizResult, AIConfig, InterviewerStyle, UserProfile, MistakeRecord } from './types';
 import { generateInterviewQuestions, analyzeInterviewPerformance } from './services/geminiService';
-
-const AI_CONFIG_KEY = 'cpp_interview_ai_config';
+import { userService } from './services/userService';
 
 const App: React.FC = () => {
-  const [appState, setAppState] = useState<AppState>(AppState.WELCOME);
+  const [appState, setAppState] = useState<AppState>(AppState.LOGIN);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  
   const [questions, setQuestions] = useState<Question[]>([]);
   const [results, setResults] = useState<QuizResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [style, setStyle] = useState<InterviewerStyle>('standard');
-  
-  // Settings State
-  const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // Initial Auth Check
   useEffect(() => {
-    const saved = localStorage.getItem(AI_CONFIG_KEY);
-    if (saved) {
-      try {
-        setAiConfig(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse saved config");
-      }
+    const user = userService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      setAppState(AppState.WELCOME);
     }
   }, []);
 
+  const handleLogin = (u: string, p: string) => {
+    if (userService.login(u, p)) {
+      const user = userService.getCurrentUser();
+      setCurrentUser(user);
+      setAppState(AppState.WELCOME);
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = () => {
+    userService.logout();
+    setCurrentUser(null);
+    setAppState(AppState.LOGIN);
+  };
+
+  const refreshUser = () => {
+    const user = userService.getCurrentUser();
+    setCurrentUser(user);
+  };
+
   const handleSaveSettings = (config: AIConfig) => {
-    setAiConfig(config);
-    localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(config));
+    userService.updateAIConfig(config);
+    refreshUser();
   };
 
   const handleStart = () => {
-    if (!aiConfig || !aiConfig.apiKey) {
+    if (!currentUser?.aiConfig || !currentUser.aiConfig.apiKey) {
       setIsSettingsOpen(true);
       return;
     }
@@ -46,12 +64,12 @@ const App: React.FC = () => {
   };
 
   const handleTopicsSelected = async (selectedTopicIds: string[], resumeText?: string, selectedStyle: InterviewerStyle = 'standard') => {
-    if (!aiConfig) return;
+    if (!currentUser?.aiConfig) return;
     
     setStyle(selectedStyle);
     setIsLoading(true);
     try {
-      const generatedQuestions = await generateInterviewQuestions(selectedTopicIds, aiConfig, resumeText, selectedStyle);
+      const generatedQuestions = await generateInterviewQuestions(selectedTopicIds, currentUser.aiConfig, resumeText, selectedStyle);
       setQuestions(generatedQuestions);
       setAppState(AppState.QUIZ);
     } catch (error: any) {
@@ -65,12 +83,21 @@ const App: React.FC = () => {
   };
 
   const handleQuizSubmit = async (answers: Record<number, string>) => {
-    if (!aiConfig) return;
+    if (!currentUser?.aiConfig) return;
 
     setAppState(AppState.ANALYZING);
     setIsLoading(true); 
     try {
-      const analysis = await analyzeInterviewPerformance(questions, answers, aiConfig, style);
+      const analysis = await analyzeInterviewPerformance(questions, answers, currentUser.aiConfig, style);
+      
+      // Save Stats
+      userService.addHistory({
+        date: new Date().toISOString(),
+        score: analysis.overallScore,
+        topicIds: questions.flatMap(q => q.tags) // Approximate topics by tags
+      });
+      refreshUser();
+
       setResults(analysis);
       setAppState(AppState.RESULTS);
     } catch (error) {
@@ -88,20 +115,35 @@ const App: React.FC = () => {
     setAppState(AppState.WELCOME);
   };
 
+  const handleAddMistake = (mistake: MistakeRecord) => {
+    userService.addMistake(mistake);
+    refreshUser();
+    alert("已加入错题本");
+  };
+
+  // Render Logic
+  if (appState === AppState.LOGIN) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)}
-        currentConfig={aiConfig}
+        currentConfig={currentUser?.aiConfig || null}
         onSave={handleSaveSettings}
       />
+
+      <div className="fixed top-4 left-4 z-50 text-xs text-slate-500 font-mono">
+        User: {currentUser?.username} | <button onClick={handleLogout} className="underline hover:text-white">Logout</button>
+      </div>
 
       {appState === AppState.WELCOME && (
         <WelcomeScreen 
           onStart={handleStart} 
           onOpenSettings={() => setIsSettingsOpen(true)}
-          hasConfig={!!aiConfig}
+          hasConfig={!!currentUser?.aiConfig}
         />
       )}
 
@@ -113,12 +155,16 @@ const App: React.FC = () => {
         />
       )}
 
-      {appState === AppState.DASHBOARD && (
-        <Dashboard onBack={() => setAppState(AppState.SELECTION)} />
+      {appState === AppState.DASHBOARD && currentUser && (
+        <Dashboard 
+          user={currentUser} 
+          onBack={() => setAppState(AppState.SELECTION)} 
+          onRemoveMistake={(id) => { userService.removeMistake(id); refreshUser(); }}
+        />
       )}
 
-      {appState === AppState.QUIZ && aiConfig && (
-        <QuizInterface questions={questions} onSubmit={handleQuizSubmit} isLoading={false} aiConfig={aiConfig} />
+      {appState === AppState.QUIZ && currentUser?.aiConfig && (
+        <QuizInterface questions={questions} onSubmit={handleQuizSubmit} isLoading={false} aiConfig={currentUser.aiConfig} />
       )}
 
       {appState === AppState.ANALYZING && (
@@ -140,7 +186,12 @@ const App: React.FC = () => {
       )}
 
       {appState === AppState.RESULTS && results && (
-        <ResultsView result={results} onRestart={handleRestart} />
+        <ResultsView 
+          result={results} 
+          questions={questions}
+          onRestart={handleRestart} 
+          onAddMistake={handleAddMistake}
+        />
       )}
     </div>
   );

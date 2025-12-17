@@ -1,5 +1,6 @@
 
 export enum AppState {
+  LOGIN = 'LOGIN',
   WELCOME = 'WELCOME',
   DASHBOARD = 'DASHBOARD',
   SELECTION = 'SELECTION',
@@ -30,10 +31,18 @@ export interface Question {
   id: number;
   category: string;
   type: QuestionType;
-  tags: string[]; // e.g., "C++17", "Memory Leak", "Epoll"
+  tags: string[];
   text: string;
-  codeSnippet?: string; // Initial code for coding questions
+  codeSnippet?: string;
   difficulty: '简单' | '中等' | '困难';
+}
+
+export interface MistakeRecord {
+  id: string; // unique ID
+  question: Question;
+  userAnswer: string;
+  feedback: string;
+  date: string;
 }
 
 export interface QuizResult {
@@ -42,10 +51,10 @@ export interface QuizResult {
   questionAnalysis: QuestionAnalysis[];
   learningPath: LearningStep[];
   dimensions: {
-    knowledge: number; // 基础知识
-    coding: number;    // 代码能力
-    system: number;    // 系统设计
-    communication: number; // 沟通表达
+    knowledge: number;
+    coding: number;
+    system: number;
+    communication: number;
   };
 }
 
@@ -54,14 +63,14 @@ export interface QuestionAnalysis {
   questionText: string;
   questionType: QuestionType;
   userAnswer: string;
-  score: number; // 0-10
+  score: number;
   feedback: string;
   standardAnswer: string;
   codeFeedback?: {
     isCompilable: boolean;
     output?: string;
-    efficiency?: string; // Time/Space complexity
-    modernCppUsage?: string; // Suggestions for C++11/14/17/20
+    efficiency?: string;
+    modernCppUsage?: string;
   };
 }
 
@@ -71,12 +80,17 @@ export interface LearningStep {
   resources: string[];
 }
 
-export interface UserStats {
-  totalQuestions: number;
-  avgScore: number;
-  weakPoints: string[];
-  history: { date: string; score: number }[];
-  mistakeBook: number[]; // IDs of questions answered poorly (mock logic)
+export interface UserHistoryItem {
+  date: string;
+  score: number;
+  topicIds: string[];
+}
+
+export interface UserProfile {
+  username: string;
+  aiConfig: AIConfig | null;
+  history: UserHistoryItem[];
+  mistakes: MistakeRecord[];
 }
 
 export const AVAILABLE_TOPICS: Topic[] = [

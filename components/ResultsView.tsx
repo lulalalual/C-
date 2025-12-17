@@ -1,17 +1,33 @@
 import React from 'react';
-import { QuizResult } from '../types';
+import { QuizResult, Question, MistakeRecord } from '../types';
 import { Button } from './Button';
 
 interface ResultsViewProps {
   result: QuizResult;
+  questions: Question[]; // Need original questions to save full context
   onRestart: () => void;
+  onAddMistake: (mistake: MistakeRecord) => void;
 }
 
-export const ResultsView: React.FC<ResultsViewProps> = ({ result, onRestart }) => {
+export const ResultsView: React.FC<ResultsViewProps> = ({ result, questions, onRestart, onAddMistake }) => {
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-emerald-400';
     if (score >= 60) return 'text-amber-400';
     return 'text-red-400';
+  };
+
+  const handleAddToMistakes = (qa: any) => {
+    const question = questions.find(q => q.id === qa.questionId);
+    if (!question) return;
+
+    const mistake: MistakeRecord = {
+      id: Date.now().toString() + Math.random().toString(),
+      question: question,
+      userAnswer: qa.userAnswer,
+      feedback: qa.feedback,
+      date: new Date().toISOString()
+    };
+    onAddMistake(mistake);
   };
 
   return (
@@ -110,7 +126,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, onRestart }) =
                       <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">{item.standardAnswer}</p>
                     </div>
                     <div className="mt-4 flex justify-end">
-                      <button className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                      <button 
+                        onClick={() => handleAddToMistakes(item)}
+                        className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 border border-indigo-500/30 px-3 py-1.5 rounded transition-all hover:bg-indigo-900/30"
+                      >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
                         加入错题本
                       </button>

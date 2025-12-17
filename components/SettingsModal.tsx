@@ -14,13 +14,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ currentConfig, onS
   const [apiKey, setApiKey] = useState('');
 
   useEffect(() => {
-    if (isOpen && currentConfig) {
-      setProvider(currentConfig.provider);
-      setApiKey(currentConfig.apiKey);
-    } else if (isOpen && !currentConfig) {
-      // Defaults
-      setProvider('deepseek');
-      setApiKey(''); 
+    if (isOpen) {
+      if (currentConfig) {
+        setProvider(currentConfig.provider);
+        setApiKey(currentConfig.apiKey);
+      } else {
+        setProvider('deepseek');
+        setApiKey(''); 
+      }
     }
   }, [isOpen, currentConfig]);
 
@@ -41,7 +42,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ currentConfig, onS
         <div className="p-6">
           <h2 className="text-xl font-bold text-white mb-4">配置 AI 模型</h2>
           <p className="text-slate-400 text-sm mb-6">
-            请选择您使用的 AI 提供商并输入相应的 API Key。这些信息仅存储在您的本地浏览器中。
+            请选择您使用的 AI 提供商并输入相应的 API Key。此配置将保存到您的个人账户中。
           </p>
 
           <div className="space-y-4">
