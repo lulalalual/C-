@@ -1,190 +1,110 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Question, AIConfig } from '../types';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Question } from '../types';
 import { Button } from './Button';
-import Prism from 'prismjs';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
-import { simulateCppExecution } from '../services/geminiService';
 
 interface QuizInterfaceProps {
   questions: Question[];
   onSubmit: (answers: Record<number, string>) => void;
   isLoading: boolean;
-  aiConfig: AIConfig;
 }
 
-export const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, onSubmit, isLoading, aiConfig }) => {
+export const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, onSubmit, isLoading }) => {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [consoleOutput, setConsoleOutput] = useState<string>("// 点击 '运行代码' 查看输出...");
-  const [isRunning, setIsRunning] = useState(false);
   
   const currentQ = questions[currentIdx];
-  const isCodeQuestion = currentQ.type === 'code';
 
-  // Prism Highlight logic
-  const codeRef = useRef<HTMLPreElement>(null);
-  
-  useEffect(() => {
-    if (codeRef.current) {
-      Prism.highlightElement(codeRef.current);
+  const handleNext = useCallback(() => {
+    if (currentIdx < questions.length - 1) {
+      setCurrentIdx(prev => prev + 1);
     }
-  }, [answers, currentIdx, isCodeQuestion]);
+  }, [currentIdx, questions.length]);
 
-  useEffect(() => {
-    // Set initial code snippet if empty
-    if (currentQ.codeSnippet && !answers[currentQ.id]) {
-      setAnswers(prev => ({ ...prev, [currentQ.id]: currentQ.codeSnippet! }));
+  const handlePrev = useCallback(() => {
+    if (currentIdx > 0) {
+      setCurrentIdx(prev => prev - 1);
     }
-  }, [currentQ, answers]);
+  }, [currentIdx]);
 
-  const handleAnswerChange = (text: string) => {
-    setAnswers(prev => ({ ...prev, [currentQ.id]: text }));
-  };
-
-  const handleRunCode = async () => {
-    if (!answers[currentQ.id]) return;
-    setIsRunning(true);
-    setConsoleOutput("Compiling with g++ -std=c++20 -O2 -Wall...\nRunning static analysis...");
-    
-    try {
-      const result = await simulateCppExecution(answers[currentQ.id], currentQ.text, aiConfig);
-      let output = "";
-      if (!result.isCompilable) {
-        output += `\x1b[31mCompilation Error:\x1b[0m\n${result.stderr}\n`;
-      } else {
-        output += `\x1b[32mBuild Success.\x1b[0m\n`;
-        output += `\n[STDOUT]:\n${result.stdout}\n`;
-        if (result.analysis) {
-          output += `\n[AI Analysis]:\n${result.analysis}`;
+  // 快捷键支持：Ctrl + Enter 提交或进入下一题
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        if (currentIdx === questions.length - 1) {
+          onSubmit(answers);
+        } else {
+          handleNext();
         }
       }
-      setConsoleOutput(output);
-    } catch (e) {
-      setConsoleOutput("Error communicating with simulation service.");
-    } finally {
-      setIsRunning(false);
-    }
-  };
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIdx, answers, handleNext, onSubmit, questions.length]);
 
   return (
-    <div className="h-screen bg-[#1e1e1e] flex flex-col overflow-hidden text-slate-300">
-      
-      {/* Top Bar */}
-      <div className="h-12 bg-[#2d2d2d] border-b border-[#3e3e3e] flex items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          <span className="font-semibold text-slate-100">C++ 面试终端</span>
-          <div className="flex gap-1">
-            {questions.map((_, i) => (
-              <div 
-                key={i} 
-                className={`w-2 h-2 rounded-full ${i === currentIdx ? 'bg-indigo-500' : answers[questions[i].id] ? 'bg-emerald-500' : 'bg-[#4e4e4e]'}`} 
-              />
-            ))}
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center py-8 md:py-12 px-4">
+      <div className="max-w-3xl w-full">
+        <div className="mb-8">
+          <div className="flex justify-between items-end mb-2">
+            <h3 className="text-indigo-400 font-mono text-xs font-bold uppercase tracking-widest">
+              面试进行中 — 问题 {currentIdx + 1} / {questions.length}
+            </h3>
+            <span className="text-slate-500 text-[10px] font-mono">CTRL + ENTER 快速前进</span>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500">{currentIdx + 1} / {questions.length}</span>
-          <Button size="sm" variant="secondary" onClick={() => onSubmit(answers)} isLoading={isLoading}>
-            交卷
-          </Button>
-        </div>
-      </div>
-
-      {/* Main Split Pane */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        
-        {/* Left: Problem Description */}
-        <div className="w-full md:w-[40%] bg-[#252526] border-r border-[#3e3e3e] flex flex-col overflow-y-auto">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className={`px-2 py-0.5 text-xs rounded border 
-                ${currentQ.difficulty === '困难' ? 'border-red-500/30 text-red-400 bg-red-500/10' : 
-                  currentQ.difficulty === '中等' ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : 
-                  'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'}`}>
-                {currentQ.difficulty}
-              </span>
-              <span className="px-2 py-0.5 text-xs rounded border border-indigo-500/30 text-indigo-400 bg-indigo-500/10">
-                {currentQ.type.toUpperCase()}
-              </span>
-              {currentQ.tags.map(tag => (
-                <span key={tag} className="text-xs text-slate-500 font-mono">#{tag}</span>
-              ))}
-            </div>
-
-            <h2 className="text-xl font-bold text-slate-100 mb-4">{currentQ.text}</h2>
-            
-            <div className="prose prose-invert prose-sm text-slate-400">
-              <p>请在右侧编辑器中编写代码或输入答案。</p>
-              {isCodeQuestion && (
-                <ul className="list-disc pl-4 space-y-1 mt-2">
-                  <li>注意内存管理 (RAII)</li>
-                  <li>考虑异常安全性</li>
-                  <li>使用现代 C++ 特性</li>
-                </ul>
-              )}
-            </div>
-          </div>
-          
-          <div className="mt-auto p-4 border-t border-[#3e3e3e] flex justify-between">
-            <Button size="sm" variant="secondary" onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0}>
-              上一题
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))} disabled={currentIdx === questions.length - 1}>
-              下一题
-            </Button>
-          </div>
-        </div>
-
-        {/* Right: Editor / Answer Area */}
-        <div className="flex-1 flex flex-col bg-[#1e1e1e] relative">
-          
-          {/* Editor Toolbar */}
-          <div className="h-10 bg-[#2d2d2d] flex items-center justify-between px-4 border-b border-[#3e3e3e]">
-            <span className="text-xs font-mono text-slate-400">solution.{isCodeQuestion ? 'cpp' : 'md'}</span>
-            {isCodeQuestion && (
-              <button 
-                onClick={handleRunCode}
-                disabled={isRunning}
-                className="flex items-center gap-1 text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded transition-colors"
-              >
-                {isRunning ? (
-                  <span className="animate-spin">⟳</span>
-                ) : (
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"/></svg>
-                )}
-                运行代码 (Simulated)
-              </button>
-            )}
-          </div>
-
-          {/* Editor Area */}
-          <div className="flex-1 relative code-editor-wrapper">
-            {/* Syntax Highlight Overlay */}
-            <pre className="code-editor-highlight language-cpp" aria-hidden="true">
-              <code ref={codeRef}>{answers[currentQ.id] || ''}</code>
-            </pre>
-            
-            {/* Transparent Textarea for Input */}
-            <textarea
-              className="code-editor-textarea"
-              value={answers[currentQ.id] || ''}
-              onChange={(e) => handleAnswerChange(e.target.value)}
-              spellCheck={false}
-              autoCapitalize="none"
-              placeholder={isCodeQuestion ? "#include <iostream>\n..." : "在此输入你的答案..."}
+          <div className="h-1 bg-slate-900 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-indigo-500 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(99,102,241,0.4)]"
+              style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
             />
           </div>
+        </div>
 
-          {/* Console Output (Collapsible) */}
-          {isCodeQuestion && (
-            <div className="h-1/3 bg-[#1e1e1e] border-t border-[#3e3e3e] flex flex-col">
-              <div className="px-4 py-1 bg-[#252526] text-xs font-bold text-slate-400 border-b border-[#3e3e3e]">终端</div>
-              <pre className="flex-1 p-4 font-mono text-xs text-slate-300 overflow-auto whitespace-pre-wrap">
-                {consoleOutput}
-              </pre>
-            </div>
-          )}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 mb-6 shadow-xl transition-all duration-200">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              {currentQ.difficulty}
+            </span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+              {currentQ.type === 'concept' ? '基础原理' : currentQ.type === 'design' ? '架构设计' : '场景分析'}
+            </span>
+          </div>
+          
+          <h2 className="text-xl md:text-2xl font-bold text-white leading-snug mb-8">
+            {currentQ.text}
+          </h2>
+
+          <textarea
+            autoFocus
+            key={currentQ.id} // 切换题目时自动聚焦
+            value={answers[currentQ.id] || ''}
+            onChange={(e) => setAnswers(p => ({ ...p, [currentQ.id]: e.target.value }))}
+            placeholder="请阐述你的理解、实现原理或设计方案..."
+            className="w-full h-72 bg-slate-950 border border-slate-800 rounded-xl p-5 text-slate-200 placeholder-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none text-base md:text-lg leading-relaxed shadow-inner"
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <Button 
+            variant="outline" 
+            onClick={handlePrev}
+            disabled={currentIdx === 0}
+            className="text-xs py-2"
+          >
+            上一题
+          </Button>
+
+          <div className="flex gap-3">
+            {currentIdx === questions.length - 1 ? (
+              <Button onClick={() => onSubmit(answers)} isLoading={isLoading} className="px-8 shadow-indigo-500/10">
+                结束面试
+              </Button>
+            ) : (
+              <Button onClick={handleNext} className="px-8">
+                下一题
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

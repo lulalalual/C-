@@ -24,7 +24,7 @@ export interface Topic {
   category: 'core' | 'system' | 'advanced';
 }
 
-export type QuestionType = 'concept' | 'code' | 'design';
+export type QuestionType = 'concept' | 'scenario' | 'design';
 export type InterviewerStyle = 'standard' | 'deep_dive' | 'stress' | 'project_focused';
 
 export interface Question {
@@ -33,12 +33,11 @@ export interface Question {
   type: QuestionType;
   tags: string[];
   text: string;
-  codeSnippet?: string;
   difficulty: '简单' | '中等' | '困难';
 }
 
 export interface MistakeRecord {
-  id: string; // unique ID
+  id: string;
   question: Question;
   userAnswer: string;
   feedback: string;
@@ -52,7 +51,7 @@ export interface QuizResult {
   learningPath: LearningStep[];
   dimensions: {
     knowledge: number;
-    coding: number;
+    logic: number;
     system: number;
     communication: number;
   };
@@ -66,12 +65,6 @@ export interface QuestionAnalysis {
   score: number;
   feedback: string;
   standardAnswer: string;
-  codeFeedback?: {
-    isCompilable: boolean;
-    output?: string;
-    efficiency?: string;
-    modernCppUsage?: string;
-  };
 }
 
 export interface LearningStep {
@@ -94,18 +87,12 @@ export interface UserProfile {
 }
 
 export const AVAILABLE_TOPICS: Topic[] = [
-  // C++ Core
-  { id: 'cpp_basics', name: 'C++ 基础与 STL', description: '容器, 迭代器, 算法, 常用关键字', icon: 'Code', category: 'core' },
-  { id: 'cpp_modern', name: '现代 C++ (11-20)', description: '智能指针, Lambda, 右值引用, Concepts', icon: 'Zap', category: 'core' },
-  { id: 'cpp_oop', name: '面向对象与设计模式', description: '虚函数, 多态, 单例/工厂/观察者模式', icon: 'Box', category: 'core' },
-  { id: 'cpp_memory', name: '内存管理深度解析', description: 'RAII, 内存池, 内存泄漏排查, Allocator', icon: 'Database', category: 'core' },
-  
-  // System Programming
-  { id: 'cpp_concurrency', name: '多线程与并发', description: 'Thread, Mutex, Atomic, 内存模型, 死锁', icon: 'Cpu', category: 'system' },
-  { id: 'linux_sys', name: 'Linux 系统编程', description: 'IPC, 信号, 进程调度, 文件系统', icon: 'Terminal', category: 'system' },
-  { id: 'cpp_net', name: '网络编程高性能 IO', description: 'Socket, Epoll, Reactor, TCP/IP 状态机', icon: 'Globe', category: 'system' },
-  
-  // Advanced
-  { id: 'system_design', name: '后端系统设计', description: '分布式, 缓存(Redis), 负载均衡, 数据库设计', icon: 'Layers', category: 'advanced' },
-  { id: 'performance', name: '性能优化与调试', description: 'GDB, Perf, 火焰图, 锁竞争优化', icon: 'Activity', category: 'advanced' },
+  { id: 'cpp_basics', name: 'C++ 基础与 STL', description: '容器, 迭代器, 常用关键字原理', icon: 'Code', category: 'core' },
+  { id: 'cpp_modern', name: '现代 C++ 特性', description: '智能指针, 右值引用, 内存模型', icon: 'Zap', category: 'core' },
+  { id: 'cpp_oop', name: '面向对象与设计模式', description: '虚函数表, 多态实现, 常用模式', icon: 'Box', category: 'core' },
+  { id: 'cpp_concurrency', name: '多线程与并发', description: '原子操作, 锁机制, 线程池原理', icon: 'Cpu', category: 'system' },
+  { id: 'linux_sys', name: 'Linux 系统编程', description: '进程线程管理, 信号处理, VFS', icon: 'Terminal', category: 'system' },
+  { id: 'cpp_net', name: '高性能网络 IO', description: 'Epoll, Reactor, TCP/IP 协议栈深度', icon: 'Globe', category: 'system' },
+  { id: 'system_design', name: '后端系统设计', description: '架构演进, 分布式一致性, 缓存策略', icon: 'Layers', category: 'advanced' },
+  { id: 'performance', name: '性能调优与排查', description: '内存泄漏定位, 锁竞争优化, GDB 技巧', icon: 'Activity', category: 'advanced' },
 ];
