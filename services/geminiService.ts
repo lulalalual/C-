@@ -4,7 +4,7 @@ import { Question, QuizResult, AIConfig, InterviewerStyle } from "../types";
 
 const GEMINI_MODEL = "gemini-3-flash-preview";
 
-// 极简题目架构 - 减少 Token 传输
+// 极简 Schema 减少 Token 生成时间
 const questionSchema: Schema = {
   type: Type.ARRAY,
   items: {
@@ -19,7 +19,6 @@ const questionSchema: Schema = {
   }
 };
 
-// 紧凑型分析架构
 const analysisSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -56,28 +55,27 @@ const analysisSchema: Schema = {
           title: { type: Type.STRING },
           description: { type: Type.STRING },
           resources: { type: Type.ARRAY, items: { type: Type.STRING } }
-        },
-        required: ['title', 'description', 'resources']
+        }
       }
     }
   },
-  required: ['overallScore', 'overallFeedback', 'questionAnalysis', 'learningPath', 'dimensions']
+  required: ['overallScore', 'overallFeedback', 'questionAnalysis', 'dimensions']
 };
 
 const getSystemInstruction = (style: InterviewerStyle) => {
   const styles = {
-    standard: "专业一线大厂风格，注重基础与工程规范。",
-    deep_dive: "技术专家风格，深挖底层原理、内存模型及源码实现。",
-    stress: "压力面试风格，语气严肃，对回答漏洞进行连环追问。",
-    project_focused: "实战负责人风格，关注项目细节与工程落地。"
+    standard: "标准大厂面试风格。",
+    deep_dive: "专家级，深挖底层原理和实现机制。",
+    stress: "压力面试，追问细节，语气严肃。",
+    project_focused: "实战向，关注工业界落地和性能调优。"
   };
   return `你是一位 C++ 后端技术面试官。
-  角色定位：${styles[style]}
-  硬性要求：
-  1. 题目、点评、解析、学习建议必须【全中文】。
-  2. 严禁要求写代码，只出简答题/原理题。
-  3. 回复格式必须严格符合 JSON 规范。
-  4. 保持高效、精准，不废话。`;
+  风格：${styles[style]}
+  核心规则：
+  1. 【绝对硬性】所有输出必须为全中文。
+  2. 【绝对禁令】严禁要求写代码。仅限理论、原理、架构讨论。
+  3. 考察重点：Linux、C++ 语言基础、多线程并发。
+  4. 保持高效， JSON 结构必须严丝合缝。`;
 };
 
 export const generateInterviewQuestions = async (
@@ -86,11 +84,14 @@ export const generateInterviewQuestions = async (
   resumeText?: string,
   style: InterviewerStyle = 'standard'
 ): Promise<Question[]> => {
-  const ai = new GoogleGenAI({ apiKey: config.apiKey });
-  const prompt = `为 C++ 后端实习生生成 5 道中文面试题。
-  范围：${topics.join(', ')}。
-  ${resumeText ? `结合简历：${resumeText}` : ''}
-  题目需具有区分度，涵盖原理、机制或架构。`;
+  // 优先使用用户在 UI 中输入的 apiKey
+  const apiKey = config.apiKey || process.env.API_KEY;
+  if (!apiKey) throw new Error("Missing API Key");
+
+  const ai = new GoogleGenAI({ apiKey });
+  const prompt = `生成 5 道关于 [${topics.join(', ')}] 的 C++ 后端面试简答题。
+  要求：全中文，无代码题，侧重原理。
+  ${resumeText ? `参考背景：${resumeText}` : ''}`;
 
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL,
@@ -99,12 +100,12 @@ export const generateInterviewQuestions = async (
       responseMimeType: "application/json",
       responseSchema: questionSchema,
       systemInstruction: getSystemInstruction(style),
-      temperature: 0.7, // 适度随机性
+      temperature: 0.8,
     },
   });
   
-  const rawQuestions = JSON.parse(response.text || "[]");
-  return rawQuestions.map((q: any) => ({
+  const raw = JSON.parse(response.text || "[]");
+  return raw.map((q: any) => ({
     ...q,
     category: topics[0],
     tags: topics,
@@ -118,10 +119,11 @@ export const analyzeInterviewPerformance = async (
   config: AIConfig,
   style: InterviewerStyle
 ): Promise<QuizResult> => {
-  const ai = new GoogleGenAI({ apiKey: config.apiKey });
-  const context = questions.map(q => `问：${q.text}\n答：${answers[q.id] || "未回答"}`).join('\n\n');
+  const apiKey = config.apiKey || process.env.API_KEY;
+  const ai = new GoogleGenAI({ apiKey: apiKey! });
   
-  const prompt = `请对以下面试表现进行中文评估：\n${context}\n\n给出评分、分析及参考路径。`;
+  const context = questions.map(q => `问：${q.text}\n答：${answers[q.id] || "未回答"}`).join('\n\n');
+  const prompt = `评估以下面试表现（全中文）：\n${context}`;
 
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL,
@@ -130,12 +132,11 @@ export const analyzeInterviewPerformance = async (
       responseMimeType: "application/json",
       responseSchema: analysisSchema,
       systemInstruction: getSystemInstruction(style),
-      temperature: 0.2, // 评估需更稳定
+      temperature: 0.1,
     },
   });
 
   const result = JSON.parse(response.text || "{}") as QuizResult;
-  // 补全 UI 渲染所需字段
   result.questionAnalysis = result.questionAnalysis.map(qa => ({
     ...qa,
     questionText: questions.find(q => q.id === qa.questionId)?.text || '',

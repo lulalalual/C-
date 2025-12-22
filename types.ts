@@ -9,7 +9,7 @@ export enum AppState {
   RESULTS = 'RESULTS',
 }
 
-export type AIProvider = 'gemini' | 'deepseek';
+export type AIProvider = 'gemini';
 
 export interface AIConfig {
   provider: AIProvider;
@@ -21,7 +21,7 @@ export interface Topic {
   name: string;
   description: string;
   icon: string;
-  category: 'core' | 'system' | 'advanced';
+  category: 'core' | 'system' | 'concurrency';
 }
 
 export type QuestionType = 'concept' | 'scenario' | 'design';
@@ -87,12 +87,10 @@ export interface UserProfile {
 }
 
 export const AVAILABLE_TOPICS: Topic[] = [
-  { id: 'cpp_basics', name: 'C++ 基础与 STL', description: '容器, 迭代器, 常用关键字原理', icon: 'Code', category: 'core' },
-  { id: 'cpp_modern', name: '现代 C++ 特性', description: '智能指针, 右值引用, 内存模型', icon: 'Zap', category: 'core' },
-  { id: 'cpp_oop', name: '面向对象与设计模式', description: '虚函数表, 多态实现, 常用模式', icon: 'Box', category: 'core' },
-  { id: 'cpp_concurrency', name: '多线程与并发', description: '原子操作, 锁机制, 线程池原理', icon: 'Cpu', category: 'system' },
-  { id: 'linux_sys', name: 'Linux 系统编程', description: '进程线程管理, 信号处理, VFS', icon: 'Terminal', category: 'system' },
-  { id: 'cpp_net', name: '高性能网络 IO', description: 'Epoll, Reactor, TCP/IP 协议栈深度', icon: 'Globe', category: 'system' },
-  { id: 'system_design', name: '后端系统设计', description: '架构演进, 分布式一致性, 缓存策略', icon: 'Layers', category: 'advanced' },
-  { id: 'performance', name: '性能调优与排查', description: '内存泄漏定位, 锁竞争优化, GDB 技巧', icon: 'Activity', category: 'advanced' },
+  { id: 'cpp_lang', name: 'C++ 语言深度', description: '内存模型, 虚函数, 模板, 智能指针', icon: 'Code', category: 'core' },
+  { id: 'cpp_stl', name: 'STL 与标准库', description: '容器实现原理, 迭代器失效, 空间配置器', icon: 'Zap', category: 'core' },
+  { id: 'cpp_concurrency', name: '多线程并发', description: '锁机制, 原子操作, 内存序, 线程池', icon: 'Cpu', category: 'concurrency' },
+  { id: 'linux_os', name: 'Linux 内核与系统', description: '进程线程管理, 虚拟内存, 信号量', icon: 'Terminal', category: 'system' },
+  { id: 'linux_net', name: 'Linux 网络编程', description: 'Epoll 原理, Reactor 模式, TCP 协议栈', icon: 'Globe', category: 'system' },
+  { id: 'linux_fs', name: '文件系统与 I/O', description: 'VFS, 零拷贝技术, 磁盘调度', icon: 'HardDrive', category: 'system' },
 ];
