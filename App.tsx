@@ -7,7 +7,7 @@ import { QuizInterface } from './components/QuizInterface';
 import { ResultsView } from './components/ResultsView';
 import { SettingsModal } from './components/SettingsModal';
 import { Dashboard } from './components/Dashboard';
-import { AppState, Question, QuizResult, AIConfig, InterviewerStyle, UserProfile, MistakeRecord } from './types';
+import { AppState, Question, QuizResult, AIConfig, InterviewerStyle, UserProfile, MistakeRecord, QuestionDifficulty } from './types';
 import { generateInterviewQuestions, analyzeInterviewPerformance } from './services/geminiService';
 import { userService } from './services/userService';
 
@@ -63,17 +63,30 @@ const App: React.FC = () => {
     setAppState(AppState.SELECTION);
   };
 
-  const handleTopicsSelected = async (selectedTopicIds: string[], resumeText?: string, selectedStyle: InterviewerStyle = 'standard') => {
+  const handleTopicsSelected = async (
+    selectedTopicIds: string[], 
+    count: number,
+    difficulty: QuestionDifficulty,
+    resumeText?: string, 
+    selectedStyle: InterviewerStyle = 'standard'
+  ) => {
     if (!currentUser?.aiConfig) return;
     
     setStyle(selectedStyle);
     setIsLoading(true);
     try {
-      const generatedQuestions = await generateInterviewQuestions(selectedTopicIds, currentUser.aiConfig, resumeText, selectedStyle);
+      const generatedQuestions = await generateInterviewQuestions(
+        selectedTopicIds, 
+        currentUser.aiConfig, 
+        count,
+        difficulty,
+        resumeText, 
+        selectedStyle
+      );
       setQuestions(generatedQuestions);
       setAppState(AppState.QUIZ);
     } catch (error: any) {
-      alert("生成题目失败，请检查 API Key。");
+      alert(error.message || "生成题目失败");
     } finally {
       setIsLoading(false);
     }

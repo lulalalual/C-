@@ -9,10 +9,8 @@ export enum AppState {
   RESULTS = 'RESULTS',
 }
 
-export type AIProvider = 'gemini' | 'deepseek';
-
+// 移除多模型选择，仅支持 DeepSeek
 export interface AIConfig {
-  provider: AIProvider;
   apiKey: string;
 }
 
@@ -21,11 +19,12 @@ export interface Topic {
   name: string;
   description: string;
   icon: string;
-  category: 'core' | 'system' | 'concurrency';
+  category: 'core' | 'infra' | 'architecture';
 }
 
-export type QuestionType = 'concept' | 'scenario' | 'design';
+export type QuestionType = 'concept'; // 仅简答题/概念题
 export type InterviewerStyle = 'standard' | 'deep_dive' | 'stress' | 'project_focused';
+export type QuestionDifficulty = 'easy' | 'medium' | 'hard' | 'mixed';
 
 export interface Question {
   id: number;
@@ -87,11 +86,20 @@ export interface UserProfile {
   mistakes: MistakeRecord[];
 }
 
+// 合并后的题库 + 新增的高级话题
 export const AVAILABLE_TOPICS: Topic[] = [
-  { id: 'cpp_lang', name: 'C++ 语言深度', description: '内存模型, 虚函数, 模板, 智能指针', icon: 'Code', category: 'core' },
-  { id: 'cpp_stl', name: 'STL 与标准库', description: '容器实现原理, 迭代器失效, 空间配置器', icon: 'Zap', category: 'core' },
-  { id: 'cpp_concurrency', name: '多线程并发', description: '锁机制, 原子操作, 内存序, 线程池', icon: 'Cpu', category: 'concurrency' },
-  { id: 'linux_os', name: 'Linux 内核与系统', description: '进程线程管理, 虚拟内存, 信号量', icon: 'Terminal', category: 'system' },
-  { id: 'linux_net', name: 'Linux 网络编程', description: 'Epoll 原理, Reactor 模式, TCP 协议栈', icon: 'Globe', category: 'system' },
-  { id: 'linux_fs', name: '文件系统与 I/O', description: 'VFS, 零拷贝技术, 磁盘调度', icon: 'HardDrive', category: 'system' },
+  // 核心能力 (合并了原来的 Basic/Adv/STL)
+  { id: 'cpp_core', name: 'C++ 语言核心', description: '内存模型, 智能指针, STL 原理, C++11~20 新特性, 模板元编程', icon: 'Code', category: 'core' },
+  { id: 'cpp_concurrency', name: '高并发与多线程', description: '锁机制, 原子操作, 内存序, 线程池, 协程', icon: 'Cpu', category: 'core' },
+  
+  // 底层设施 (合并了 OS/Linux/Network)
+  { id: 'system_kernel', name: 'OS 与 Linux 内核', description: '进程管理, 虚拟内存, 零拷贝, IO 模型(Epoll), 文件系统', icon: 'Terminal', category: 'infra' },
+  { id: 'network_prog', name: '网络编程协议', description: 'TCP/IP 栈, Socket, HTTP/HTTPS, QUIC, RPC 原理', icon: 'Globe', category: 'infra' },
+  
+  // 架构与数据 (新增/合并)
+  { id: 'middleware_db', name: '数据库与中间件', description: 'MySQL(索引/锁/事务), Redis(架构/策略), Kafka, ZK', icon: 'Database', category: 'architecture' },
+  { id: 'distributed_sys', name: '分布式与架构设计', description: 'CAP, 一致性 Hash, 负载均衡, 微服务, 高可用设计', icon: 'Share2', category: 'architecture' },
+  
+  // 工程化 (新增)
+  { id: 'engineering', name: '工程与工具链', description: 'GDB 调试, Perf 性能分析, Docker/K8s, CMake, 内存泄漏检测', icon: 'Wrench', category: 'architecture' },
 ];

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from './Button';
 
@@ -9,76 +10,94 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+    
+    // Simulate a small delay for better UX feel
+    await new Promise(resolve => setTimeout(resolve, 600));
     
     if (!username.trim() || !password.trim()) {
       setError('请输入用户名和密码');
+      setLoading(false);
       return;
     }
 
     const success = onLogin(username, password);
     if (!success) {
-      setError('密码错误，或者该用户已存在但密码不匹配');
+      setError('账号或密码错误');
     }
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center px-4 relative overflow-hidden">
-      {/* Background decoration similar to Welcome */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none opacity-50">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[100px]" />
+    <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center px-4 relative overflow-hidden font-sans">
+      {/* Ambient Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
       </div>
 
-      <div className="z-10 w-full max-w-md bg-slate-900/80 border border-slate-800 rounded-2xl shadow-2xl p-8 backdrop-blur-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">登录 / 注册</h1>
-          <p className="text-slate-400 text-sm">C++ 后端面试大师</p>
+      <div className="z-10 w-full max-w-[420px]">
+        <div className="text-center mb-10 space-y-2">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-2xl shadow-blue-500/30 mb-6 border border-white/10">
+            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+          </div>
+          <h1 className="text-4xl font-bold text-white tracking-tight">欢迎回来</h1>
+          <p className="text-slate-400">开启你的 C++ 后端进阶之旅</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">用户名</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="Enter your username"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">密码</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="Enter your password"
-            />
-          </div>
-
-          {error && (
-            <div className="text-red-400 text-sm text-center bg-red-900/20 py-2 rounded border border-red-500/20">
-              {error}
+        <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+          
+          <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider ml-1">用户名</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3.5 text-white placeholder-slate-600 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-mono text-sm"
+                  placeholder="developer"
+                />
+              </div>
             </div>
-          )}
 
-          <div className="pt-2">
-            <Button type="submit" className="w-full justify-center text-lg py-3">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider ml-1">密码</label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3.5 text-white placeholder-slate-600 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-mono text-sm"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-red-400 text-xs bg-red-500/10 px-4 py-3 rounded-lg border border-red-500/20 animate-shake">
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {error}
+              </div>
+            )}
+
+            <Button type="submit" className="w-full text-base font-semibold shadow-blue-500/20 py-3.5" isLoading={loading}>
               进入系统
             </Button>
-          </div>
-          
-          <p className="text-xs text-center text-slate-500 mt-4">
-            新用户输入账号密码后将自动创建账户。<br/>
-            请记住您的密码，系统不会保存明文。
-          </p>
-        </form>
+            
+            <p className="text-center text-xs text-slate-500 mt-6 leading-relaxed">
+              首次登录将自动创建账户 <br />
+              <span className="opacity-60">数据仅存储于本地浏览器</span>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );
