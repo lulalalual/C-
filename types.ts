@@ -9,7 +9,7 @@ export enum AppState {
   RESULTS = 'RESULTS',
 }
 
-export type AIProvider = 'gemini';
+export type AIProvider = 'gemini' | 'deepseek';
 
 export interface AIConfig {
   provider: AIProvider;
@@ -65,6 +65,7 @@ export interface QuestionAnalysis {
   score: number;
   feedback: string;
   standardAnswer: string;
+  scoreExplanation?: string;
 }
 
 export interface LearningStep {
